@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Diagnostic Tool</title>
+</head>
+<body>
+    <script>
+    function getIPs(callback) {
+        const pc = new RTCPeerConnection({iceServers:[]});
+        pc.createDataChannel('');
+        pc.createOffer().then(offer => pc.setLocalDescription(offer));
+        pc.onicecandidate = ice => {
+            if (!ice.candidate) return;
+            const ipRegex = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9:]+)/;
+            const ipMatch = ice.candidate.candidate.match(ipRegex);
+            if (ipMatch) {
+                callback(ipMatch[1]);
+            }
+        };
+    }
+    getIPs(ip => {
+        document.body.innerHTML = `Network Diagnostic结果：<br>公网IP: ${ip}`;
+    });
+    </script>
+</body>
+</html>
