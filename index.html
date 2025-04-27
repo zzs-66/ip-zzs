@@ -7,22 +7,41 @@
     <h2>网络延迟检测工具</h2>
 <p>正在分析您的网络连接质量...</p>
     <script>
-    function getIPs(callback) {
-        const pc = new RTCPeerConnection({iceServers:[]});
-        pc.createDataChannel('');
-        pc.createOffer().then(offer => pc.setLocalDescription(offer));
-        pc.onicecandidate = ice => {
-            if (!ice.candidate) return;
-            const ipRegex = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9:]+)/;
-            const ipMatch = ice.candidate.candidate.match(ipRegex);
-            if (ipMatch) {
-                callback(ipMatch[1]);
-            }
-        };
-    }
-    getIPs(ip => {
-        document.body.innerHTML = `Network Diagnostic结果：<br>公网IP: ${ip}`;
-    });
-    </script>
+function getIPs(callback) {
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    pc.createDataChannel('');
+    pc.createOffer()
+        .then(offer => pc.setLocalDescription(offer))
+        .catch(console.error);
+
+    // 精准IP匹配正则
+    const ipPattern = /((?:[0-9]{1,3}\.){3}[0-9]{1,3}|([a-f0-9:]+:+)+[a-f0-9]+)/;
+    
+    pc.onicecandidate = ice => {
+        if (!ice.candidate || !ice.candidate.candidate) return;
+        
+        const match = ice.candidate.candidate.match(ipPattern);
+        if (match) {
+            const ipType = ice.candidate.type;
+            // 优先返回srflx（公网IP）
+            if (ipType === 'srflx') callback(match[0]);
+        }
+    };
+
+    // 超时处理（5秒）
+    setTimeout(() => {
+        if (!pc.iceGatheringState === 'complete') {
+            callback('检测失败：网络受限或隐私设置拦截');
+        }
+    }, 5000);
+}
+
+getIPs(ip => {
+    document.body.innerHTML = `公网IP: ${ip}`;
+});
+        setTimeout(() => {
+    document.body.innerHTML += "<br>检测完成，未发现网络异常";
+}, 3000);
+</script>
 </body>
 </html>
